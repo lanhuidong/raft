@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 )
 
 type Cluster struct {
@@ -21,6 +22,15 @@ type Node struct {
 type Configuration struct {
 	Id    string `json:"id"`
 	Nodes []Node `json:"nodes"`
+}
+
+func (c Configuration) Endpoint() string {
+	for _, val := range c.Nodes {
+		if c.Id == val.Id {
+			return val.Address + ":" + strconv.Itoa(int(val.Port))
+		}
+	}
+	return ""
 }
 
 func ReadConfiguration() Configuration {
