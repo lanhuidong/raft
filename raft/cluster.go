@@ -19,18 +19,32 @@ type Node struct {
 	Port    uint32 `json:"port"`
 }
 
+func (node Node) Endpoint() string {
+	return node.Address + ":" + strconv.Itoa(int(node.Port))
+}
+
 type Configuration struct {
 	Id    string `json:"id"`
 	Nodes []Node `json:"nodes"`
 }
 
-func (c Configuration) Endpoint() string {
+func (c Configuration) SelfNode() *Node {
 	for _, val := range c.Nodes {
 		if c.Id == val.Id {
-			return val.Address + ":" + strconv.Itoa(int(val.Port))
+			return &val
 		}
 	}
-	return ""
+	return nil
+}
+
+func (c Configuration) OtherNode() []*Node {
+	nodes := make([]*Node, 0, len(c.Nodes)-1)
+	for _, val := range c.Nodes {
+		if c.Id != val.Id {
+			nodes = append(nodes, &val)
+		}
+	}
+	return nodes
 }
 
 func ReadConfiguration() Configuration {
