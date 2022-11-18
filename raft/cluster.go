@@ -37,11 +37,11 @@ func (c Configuration) SelfNode() *Node {
 	return nil
 }
 
-func (c Configuration) OtherNode() []*Node {
-	nodes := make([]*Node, 0, len(c.Nodes)-1)
+func (c Configuration) OtherNode() []Node {
+	nodes := make([]Node, 0)
 	for _, val := range c.Nodes {
 		if c.Id != val.Id {
-			nodes = append(nodes, &val)
+			nodes = append(nodes, val)
 		}
 	}
 	return nodes
