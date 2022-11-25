@@ -13,7 +13,7 @@ import (
 
 var id2ClientConn sync.Map
 
-func ListenOnMessage(config *raft.Configuration) {
+func ListenOnMessage(config *raft.Configuration, msg chan []byte) {
 	listen, err := net.Listen("tcp", config.SelfNode().Endpoint())
 	if err != nil {
 		fmt.Println("start failed")
@@ -23,14 +23,14 @@ func ListenOnMessage(config *raft.Configuration) {
 	for {
 		conn, err := listen.Accept()
 		if err != nil {
-			go ReadFixedLengthMessage(conn)
+			fmt.Printf("connection err %s\n", err.Error())
 		}
+		fmt.Printf("client %v connected.\n", conn.RemoteAddr())
+		go ReadFixedLengthMessage(conn, msg)
 	}
 }
 
-func ReadFixedLengthMessage(conn net.Conn) {
-	defer conn.Close()
-
+func ReadFixedLengthMessage(conn net.Conn, msg chan []byte) {
 	data := make([]byte, 0)
 	buf := make([]byte, 1024)
 
@@ -44,24 +44,30 @@ func ReadFixedLengthMessage(conn net.Conn) {
 				data = append(data, buf[0:n]...)
 			}
 			if len(data) == int(length) {
-				fmt.Printf("receive data %s\n", string(data))
+				msg <- data
 			}
 		}
 	}
 }
 
-func ConnectToPeer(n raft.Node) {
+func ConnectToPeer(n raft.Node, msg chan []byte) {
 	conn, err := net.Dial("tcp", n.Endpoint())
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 		return
 	}
 	id2ClientConn.Store(n.Id, conn)
+	SendMessage(n, []byte("hello raft server!"))
+	ReadFixedLengthMessage(conn, msg)
 }
 
 func SendMessage(n raft.Node, data []byte) {
 	if conn, ok := id2ClientConn.Load(n.Id); ok {
-		if n, err := conn.(net.Conn).Write(data); err == nil {
+		length := uint32(len(data))
+		buf := bytes.NewBuffer([]byte{})
+		binary.Write(buf, binary.BigEndian, length)
+		content := append(buf.Bytes(), data...)
+		if n, err := conn.(net.Conn).Write(content); err == nil {
 			fmt.Printf("data len %d, write %d\n", len(data), n)
 		}
 	}
