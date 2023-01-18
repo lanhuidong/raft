@@ -30,6 +30,23 @@ func main() {
 		}
 	}()
 
+	heartbeat := make(chan struct{})
+	go func() {
+		timer := time.NewTimer(5 * time.Second)
+		select {
+		case <-timer.C:
+			fmt.Println("heartbeat timeout!")
+			if raft.NodeState.Follower() {
+				raft.NodeState.ChangeToCandidate()
+				//发送选举消息
+				//channel.SendMessage()
+			}
+		case <-heartbeat:
+			fmt.Println("reset timeout")
+			timer.Reset(5 * time.Second)
+		}
+	}()
+
 	channel.ListenOnMessage(&config, msg)
 
 }
